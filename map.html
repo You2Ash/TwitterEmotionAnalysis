@@ -1,0 +1,138 @@
+
+<!-- Code from d3-graph-gallery.com -->
+<!DOCTYPE html>
+<meta charset="utf-8">
+<head>
+  <link rel="stylesheet" type="text/css" href="styles.css">
+</head>
+<!-- Load d3.js -->
+<ul>
+  <li class="demo"><a class="active" href="map.html">Map</a></li>
+  <li class="demo"><a href="table.html">Table</a></li>
+  <li class="per">Twitter Emotion Analysis for COVID-19 Pandemic</li>
+</ul>
+<script src="https://d3js.org/d3.v4.js"></script>
+<script src="https://d3js.org/d3-scale-chromatic.v1.min.js"></script>
+<script src="https://d3js.org/d3-geo-projection.v2.min.js"></script>
+<script src="https://datamaps.github.io/scripts/datamaps.world.min.js?v=1"></script>
+
+
+<!-- Create an element where the map will take place -->
+
+<svg id="my_dataviz" width="1250" height="750"></svg>
+
+<style>
+    div.tooltip {
+        color: #222;
+        background-color: #fff;
+        padding: .5em;
+        text-shadow: #f5f5f5 0 1px 0;
+        border-radius: 2px;
+        opacity: 0.9;
+        position: absolute;
+    }
+</style>
+
+<script>
+
+// The svg
+var svg = d3.select("svg"),
+  width = +svg.attr("width"),
+  height = +svg.attr("height");
+
+// Map and projection
+var path = d3.geoPath();
+var projection = d3.geoMercator()
+  .scale(150)
+  .center([0,20])
+  .translate([width / 2, height / 2]);
+var tooltip = d3.select('body').append('div')
+            .attr('class', 'hidden tooltip');
+
+// Data and color scale
+var data = d3.map();
+function colourmap(total){
+ if(total==0){
+   return "#fdb740";
+ }
+ if(total==1){
+   return "#40c4e0";
+ }
+ if(total==2){
+   return "#8d679d";
+ }
+ if(total==3){
+   return "#db4041";
+ }
+ if(total==4){
+   return "#cebb9e";
+ }
+}
+// Load external data and boot
+d3.queue()
+  .defer(d3.json, "https://raw.githack.com/holtzy/D3-graph-gallery/master/DATA/world.geojson")
+  .defer(d3.csv, "data/final_emotion.csv", function(d) { data.set(d.Country, d.Dominant_Emotion); })
+  .await(ready);
+  var countries = Datamap.prototype.worldTopo.objects.world.geometries;
+for (var i = 0, j = countries.length; i < j; i++) {
+  console.log(countries[i].id);
+}
+function ready(error, topo) {
+
+  let mouseOver = function(d) {
+    d3.selectAll(".Country")
+      .transition()
+      .duration(200)
+      .style("opacity", .5)
+    d3.select(this)
+      .transition()
+      .duration(200)
+      .style("opacity", 1)
+      .style("stroke", "black")
+    var mouse = d3.mouse(svg.node()).map(function(d) {
+                        return parseInt(d);
+                    });
+    var sentiments = ['joy 😃', 'sadness 😔', 'fear😨', 'anger 😡', 'neutral 😐'];
+    tooltip.classed('hidden', false)
+                        .attr('style', 'left:' + (mouse[0] + 15) +
+                                'px; top:' + (mouse[1] - 35) + 'px')
+                        .html(d.properties.name + "<br>" + sentiments[d.total]);
+    console.log(d);
+  }
+
+  let mouseLeave = function(d) {
+    d3.selectAll(".Country")
+      .transition()
+      .duration(200)
+      .style("opacity", .8)
+    d3.select(this)
+      .transition()
+      .duration(200)
+      .style("stroke", "transparent")
+    tooltip.classed('hidden', true);
+  }
+
+  // Draw the map
+  svg.append("g")
+    .selectAll("path")
+    .data(topo.features)
+    .enter()
+    .append("path")
+      // draw each country
+      .attr("d", d3.geoPath()
+        .projection(projection)
+      )
+      // set the color of each country
+      .attr("fill", function (d) {
+        d.total = data.get(d.id) || 0;
+        return colourmap(d.total);
+      })
+      .style("stroke", "transparent")
+      .attr("class", function(d){ return "Country" } )
+      .style("opacity", .8)
+      .on("mouseover", mouseOver)
+      .on("mouseleave", mouseLeave)
+    }
+
+</script>
+  
